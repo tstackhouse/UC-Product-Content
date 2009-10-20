@@ -1,0 +1,7 @@
+; $Id$
+name = Product Content
+description = Provides CCK fields to associate & purchase multiple products to a node (similar to NodeCheckout)
+package = Ubercart - extra
+dependencies[] = uc_product
+dependencies[] = content
+core = 6.x
