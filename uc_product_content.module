@@ -386,12 +386,12 @@ function uc_product_content_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
  * Implementation of hook_form_alter()
  */
 function uc_product_content_form_alter(&$form, &$form_state, $form_id) {
-  // Alter the cart view form to change node checkout product titles into edit
-  // links for the nodes they reference.
+  // Alter the cart view form to make it into an overview and direct users back to the node if changes are needed
   if ($form_id == 'uc_cart_view_form') {
     $items = uc_cart_get_contents();
     
     $source_nid = '';
+    $other_items = FALSE;
     $i = 0;
     foreach ($items as $item) {
       if (isset($item->data['product_content_source_nid'])) {
@@ -403,18 +403,34 @@ function uc_product_content_form_alter(&$form, &$form_state, $form_id) {
         // Rebuild the description from the title and options.
         $form['items'][$i]['desc']['#value'] = $form['items'][$i]['title']['#value'] . $form['items'][$i]['description']['#value'];
       
+        // don't allow removal of this item in the cart, user must edit the node
+        unset($form['items'][$i]['remove']['#type']);
+        
+        // don't allow quantity editing
+        $form['items'][$i]['qty']['#value'] = $form['items'][$i]['qty']['#default_value'];
+        unset($form['items'][$i]['qty']['#type']);
+        
         $i++;
+      }
+      else {
+        $other_items = TRUE;
       }
     }
     
-    if ($source_nid != '') {
-      dsm($form);
-      
+    if ($source_nid != '') {    
       // hijack the continue shopping link to go back and edit
       $form['continue_shopping']['#value'] = l('<< Make Changes', 'node/'. $source_nid .'/edit', array('query' => 'destination=cart'));
       
       // remove the update cart button (possibly move this to the theme layer/site specific tweaks module?)
       unset($form['update']);
+    }
+    
+    // make some more changes to the form if there are no other items besides those governed by product_content
+    if (! $other_items) {
+      // get rid of the image and remove columns, but make the desc colum have the image column title first
+      $form['items']['#columns']['desc']['cell'] = $form['items']['#columns']['image']['cell'];
+      unset($form['items']['#columns']['remove']);
+      unset($form['items']['#columns']['image']);
     }
   }
 }
