@@ -1,0 +1,55 @@
+<?php
+// $Id:$
+
+/**
+ * Implementation of hook_install().
+ */
+function uc_product_content_install() {
+  drupal_load('module', 'content');
+  content_notify('install', 'uc_product_content');
+  // Create tables.
+  drupal_install_schema('uc_product_content');
+}
+/**
+ * Implementation of hook_uninstall().
+ */
+function uc_product_content_uninstall() {
+  drupal_load('module', 'content');
+  content_notify('uninstall', 'uc_product_content');
+  // Remove tables.
+  drupal_uninstall_schema('uc_product_content');
+}
+
+function uc_product_content_enable() {
+  drupal_load('module', 'content');
+  content_notify('enable', 'uc_product_content');
+}
+
+function uc_product_content_disable() {
+  drupal_load('module', 'content');
+  content_notify('disable', 'uc_product_content');
+}
+
+
+/**
+ * Implementation of hook_schema().
+ */
+function uc_product_content_schema() {
+  $schema['uc_product_content_node_order'] = array(
+    'fields' => array(
+      'nid' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'order_id' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+    ),
+    'primary key' => array('nid'),
+  );
+
+  return $schema;
+}

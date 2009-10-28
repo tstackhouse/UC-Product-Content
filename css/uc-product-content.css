@@ -1,0 +1,16 @@
+/* Override some odd Ubercart styles */
+.field .field-label,
+.field .field-label-inline,
+.field .field-label-inline-first {
+  text-align: left;
+}
+
+#node_info-pane .node {
+  border: none;
+  margin: 0;
+  padding: 0;
+}
+
+#node_info-pane .content {
+  margin-bottom: 0;
+}

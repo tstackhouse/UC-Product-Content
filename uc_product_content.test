@@ -1,0 +1,42 @@
+<?php
+class UCProductContentTestCase extends DrupalWebTestCase {
+  public static function getInfo() {
+    return array(
+      'name' => 'uc_product_content',
+      'description' => 'Ensure that the Ubercart Product content provided functions properly.',
+      'group' => 'Functional Tests',
+    );
+  }
+  
+  public function setUp() {
+    $args = func_get_args();
+    $modules = array_merge(array('content', 'uc_cart', 'uc_product', 'uc_order', 'uc_store', 'ca', 'uc_payment', 'uc_credit', 'test_gateway', 'uc_product_content'), $args);
+    call_user_func_array(array('parent','setUp'), $modules);
+    
+    // Create and log in our user
+     $permissions = array(
+         'access content',
+         'administer content types',
+         'administer nodes',
+         'administer filters',
+       );
+
+    $privileged_user = $this->drupalCreateUser($permissions);
+    $this->drupalLogin($privileged_user);
+    
+    
+    // create a content type for the products
+    
+    // create a content type to house the CCK field to test
+    $field = 'registration';
+    $field_name = 'Registration';
+    $edit = array(
+      'type' => $field,
+      'name' => $field_name,
+      'body_label' => 'Registration',
+      'description' => 'UC Product Content Project'
+    );
+    $this->drupalPost('admin/content/types/add', $edit, 'Save content type');
+    $admin_project_url = 'admin/content/node-type/'. $field;
+  }
+}

@@ -5,381 +5,79 @@
  * @file
  * CCK Field to integrate products to nodes
  *
- * Allow products to be associated with a content type and acced to cart on node creation
+ * Allow products to be associated with a content type and added to cart on node creation, provides for editing nodes
  */
 
-function uc_product_content_install() {
-  drupal_load('module', 'content');
-  content_notify('install', 'uc_product_content');
-}
 
-function uc_product_content_uninstall() {
-  drupal_load('module', 'content');
-  content_notify('uninstall', 'uc_product_content');
-}
-
-function uc_product_content_enable() {
-  drupal_load('module', 'content');
-  content_notify('enable', 'uc_product_content');
-}
-
-function uc_product_content_disable() {
-  drupal_load('module', 'content');
-  content_notify('disable', 'uc_product_content');
-}
-
+// Load additional functions
+require_once 'uc_product_content.cck.inc';
+require_once 'uc_product_content.ubercart.inc';
 
 /**
- * Implementation of hook_field_info().
+ * Implementation of hook_init().
  */
-function uc_product_content_field_info() {
-  return array(
-    'uc_product_content' => array(
-      'label' => t('Product'),
-      'description' => t('Create product references that can be purchased at node creation.'),
-    ),
-  );
-}
-
-
-/**
- * Implementation of hook_field_settings().
- */
-function uc_product_content_field_settings($op, $field) {
-  switch ($op) {
-    case 'database columns':
-      $columns = array(
-        'product' => array('type' => 'text', 'not null' => FALSE),
-      );
-      return $columns;
-    case 'save':
-      return array('product');
-  }
-}
-
-
-/**
- * Implementation of hook_field().
- */
-function uc_product_content_field($op, &$node, $field, &$items, $teaser, $page) {
-  //dsm(array('field_' . $op, $node));
-  
-  switch ($op) {
-    case 'presave':  
-
-      break;
-    
-    case 'update':
-      // update if not new revision
-    case 'insert':
-      // fetch the cart contents and the product choices for this field
-      $cart = uc_cart_get_contents();
-      $choices = $field['widget']['product_options'];
-      
-      foreach ($items as $element) {
-        // check if there's one of the item in cart and remove items not chosen for this field, if present
-        $in_cart = FALSE;
-        $nid = $element['product'];
-        foreach ($cart as $item) {
-          if($item->nid == $nid) {
-            // there's aready one of these in the cart!
-            $in_cart = TRUE;
-          }
-          else if (in_array($item->nid, $choices)) {
-            // we're looking at an item that's a choice, but not chosen, and is in the cart. remove it.
-            uc_cart_remove_item($item->nid, $item->cart_id, $item->data);
-          }
-        }
-        
-        // make sure we don't add the non-existant 'none' option to the cart
-        if($nid != 'none' && $nid != 0) {
-          // add product to cart, if it's not already in there.
-          if (! $in_cart) {
-            uc_cart_add_item($nid, 1, array('product_content_source_nid' => $node->nid), NULL, FALSE);
-          }
-        }
-      }
-      
-      // flag node as having one or more products
-      $node->has_product_content = TRUE;
-      break;
-    
-    case 'sanitize':
-      
-      break;
-  }
-  
-  //dsm(array('$op' => $op, '$node' => $node, '$field' => $field, '$items' => $items));
-}
-
-/**
- * Implementation of hook_content_is_empty().
- */
-function uc_product_content_content_is_empty($item, $field) {
-  if (empty($item['product']) && (string)$item['product'] !== '0') {
-    return TRUE;
-  }
-  return FALSE;
-}
-
-/**
- * Implementation of hook_field_formatter_info().
- */
-function uc_product_content_field_formatter_info() {
-  return array(
-    'default' => array(
-      'label' => t('Default'),
-      'field types' => array('uc_product_content'),
-      'multiple values' => CONTENT_HANDLE_CORE,
-    ),
-  );
-}
-
-/**
- * Theme function for 'default' product field formatter.
- */
-function theme_uc_product_content_formatter_default($element) {
-  $product = _get_product($element['#item']['product']);
-  
-  return $product->title;
-}
-
-
-function _get_product($nid) {
-  if ($nid == 'none') {
-    $obj = (object) array('title' => 'None');
-    return $obj;
-  }
-  else {
-    return node_load($nid);
-  }
+function uc_product_content_init() {
+  drupal_add_css(drupal_get_path('module', 'uc_product_content') .'/css/uc-product-content.css');
 }
 
 /**
 * Implementation of hook_theme().
 */
 function uc_product_content_theme() {
-  return array(
-    'uc_product_content_radios' => array(
-      'arguments' => array('element' => NULL),
-      ),
-    'uc_product_content_formatter_default' => array(
-      'arguments' => array('element' => NULL),
-    ),
+  return array_merge(
+    _ucpc_cck_themes(),
+    _ucpc_ubercart_themes(),
+    array()
   );
-}
-
-/**
- * Implementation of FAPI hook_elements().
- *
- * Any FAPI callbacks needed for individual widgets can be declared here,
- * and the element will be passed to those callbacks for processing.
- *
- * Drupal will automatically theme the element using a theme with
- * the same name as the hook_elements key.
- *
- * Autocomplete_path is not used by text_widget but other widgets can use it
- * (see nodereference and userreference).
- */
-function uc_product_content_elements() {
-  return array(
-    'uc_product_content_radios' => array(
-      '#input' => TRUE,
-      '#columns' => array('product'), '#delta' => 0,
-      '#process' => array('uc_product_content_radios_process'),
-    ),
-  );
-}
-
-/**
- * Process an individual element.
- *
- * Build the form element. When creating a form using FAPI #process,
- * note that $element['#value'] is already set.
- *
- * The $fields array is in $form['#field_info'][$element['#field_name']].
- */
-function uc_product_content_radios_process($element, $edit, $form_state, $form) {
-  //dsm(array('$element' => $element, '$edit' => $edit, '$form_state' => $form_state, '$form' => $form));
-
-  $field = $form['#field_info'][$element['#field_name']];
-  $field_key = $element['#columns'][0];
-  $delta = $element['#delta'];
-
-  $options = array();
-  if (isset($field['widget']['product_options'])) {
-   // do some cleanup on the strange return values from the checkboxes
-   $field['widget']['product_options'] = array_keys(array_filter($field['widget']['product_options']));
-
-   if ( ($pos = array_search('none', $field['widget']['product_options'])) !== FALSE) {
-     $options['none'] = t('None');
-     unset($field['widget']['product_options'][$pos]);
-   }
-   $nids = implode(', ', $field['widget']['product_options']);
-   $data = db_query("SELECT nid, title FROM {node} WHERE nid IN (%s) ORDER BY title ASC", $nids);
-   while ($obj = db_fetch_object($data)) {
-     $options[$obj->nid] = $obj->title;
-   }
-  }
-
-  $element[$field_key] = array(
-   '#type' => 'radios',
-   '#options' => $options,
-   '#default_value' => isset($element['#value'][$field_key]) ? $element['#value'][$field_key] : NULL,
-   '#autocomplete_path' => $element['#autocomplete_path'],
-   // The following values were set by the content module and need
-   // to be passed down to the nested element.
-   '#title' => $element['#title'],
-   '#description' => $element['#description'],
-   '#required' => $element['#required'],
-   '#field_name' => $element['#field_name'],
-   '#type_name' => $element['#type_name'],
-   '#delta' => $element['#delta'],
-   '#columns' => $element['#columns'],
-  );
-
-  // Used so that hook_field('validate') knows where to flag an error.
-  $element['_error_element'] = array(
-   '#type' => 'value',
-   '#value' => implode('][', array_merge($element['#parents'], array($field_key))),
-  );
-
-  //dsm($element);
-
-  return $element;
-}
-
-
-/**
- * FAPI theme for an individual product elements.
- *
- * $element['#field_name'] contains the field name
- * $element['#delta]  is the position of this element in the group
- */
-function theme_uc_product_content_radios($element) {
-  return $element['#children'];
-}
-
-
-/**
- * Implementation of hook_default_value()
- */
-function uc_product_content_default_value(&$form, &$form_state, $field, $delta) {
-  return '';
-}
-
-
-/**
- * Implementation of hook_widget_info().
- */
-function uc_product_content_widget_info() {
-  return array(
-    'uc_product_content_radios' => array(
-      'label' => t('Radio Buttons/Checkboxes'),
-      'field types' => array('uc_product_content'),
-      'multiple values' => CONTENT_HANDLE_CORE,
-      'callbacks' => array(
-        'default value' => CONTENT_CALLBACK_DEFAULT,
-      ),
-    ),
-  );
-}
-
-/**
- * Implementation of hook_widget_settings().
- */
-function uc_product_content_widget_settings($op, $widget) {
-  // do some cleanup on the strange return values form the checkboxes
-  if(isset($widget['product_options'])) {
-    $widget['product_options'] = array_keys(array_filter($widget['product_options']));
-  }
-  
-  switch ($op) {
-    case 'form':
-      $products = array();
-  
-      $data = db_query("SELECT n.nid, n.title FROM {uc_products} AS p INNER JOIN {node} AS n ON p.nid = n.nid ORDER BY n.title ASC");
-      while ($obj = db_fetch_object($data)) {
-        $products[$obj->nid] = $obj->title;
-      }
-      $products['none'] = 'None';
-
-      $form['product_options'] = array(
-        '#type' => 'checkboxes',
-        '#title' => t('Product Options'),
-        '#default_value' => isset($widget['product_options']) ? $widget['product_options'] : array(),
-        '#options' => $products,
-        '#required' => TRUE,
-        '#description' => t('The group of products that may be selected.'),
-      );
-      // $form['array_filter'] = array('#type' => 'hidden'); // Doesn't seem to work
-      
-      return $form;
-      break;
-      
-    case 'validate':
-      
-      break;
-      
-    case 'save':
-      return array('product_options');
-  }
-}
-
-/**
- * Implementation of hook_widget().
- *
- * Attach a single form element to the form. It will be built out and
- * validated in the callback(s) listed in hook_elements. We build it
- * out in the callbacks rather than here in hook_widget so it can be
- * plugged into any module that can provide it with valid
- * $field information.
- *
- * Content module will set the weight, field name and delta values
- * for each form element. This is a change from earlier CCK versions
- * where the widget managed its own multiple values.
- *
- * If there are multiple values for this field, the content module will
- * call this function as many times as needed.
- *
- * @param $form
- *   the entire form array, $form['#node'] holds node information
- * @param $form_state
- *   the form_state, $form_state['values'][$field['field_name']]
- *   holds the field's form values.
- * @param $field
- *   the field array
- * @param $items
- *   array of default values for this field
- * @param $delta
- *   the order of this item in the array of subelements (0, 1, 2, etc)
- *
- * @return
- *   the form item for a single element for this field
- */
-function uc_product_content_widget(&$form, &$form_state, $field, $items, $delta = 0) {  
-  $element = array(
-    '#type' => $field['widget']['type'],
-    '#default_value' => isset($items[$delta]) ? $items[$delta] : '',
-  );
-  return $element;
 }
 
 /**
  * Implementation of hook_nodeapi()
  */
 function uc_product_content_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
-  //dsm(array('nodeapi_' . $op, $node));
   switch ($op) {
+    case 'load':
+      $record = db_fetch_object(db_query("SELECT * FROM {uc_product_content_node_order} WHERE nid = %d", $node->nid));
+      if($record != null) {
+        $node->order_id = $record->order_id;
+        $node->order = uc_order_load($node->order_id);
+      }      
+      break;
+      
     case 'update':
       // update if not new revision
-    case 'insert':
-      // check if we're dealing with product content nodes, if so, step in and goto cart
-      if (isset($node->has_product_content) && $node->has_product_content) {
-        drupal_goto('cart');
+    case 'insert':    
+      // we only need to do this once, it will only ever be one order assocated with this node
+      $data['nid']      = $node->nid;
+      $data['order_id'] = (isset($node->order_id)) ? $node->order_id : '';
+      
+      drupal_write_record('uc_product_content_node_order', $data, 'nid');
+      
+      // check if we're dealing with product content nodes that haven't checked out yet, if so, step in and goto cart
+      //dsm(array('nodeapi_' . $op, $node));
+      if (isset($node->has_product_content) && $node->has_product_content && ! isset($node->order_id)) {
+        //dsm('I shouldn\'t be here either!', $node->order_id);
+        drupal_goto('cart/checkout');
+      }
+      
+      break;
+    
+    case 'view':
+      if ($node->order_id) {
+        _ucpc_show_order($node);
+      }
+      
+      break;
+    
+    case 'delete':
+      $record = db_fetch_object(db_query("SELECT * FROM {uc_product_content_node_order} WHERE nid = %d", $node->nid));
+      if($record != null) {
+        uc_order_delete($record->order_id);
+        db_query("DELETE FROM {uc_product_content_node_order} WHERE nid = %d", $node->nid);
       }
       break;
   }
+  //dsm(array('nodeapi_' . $op, $node));
 }
 
 /**
@@ -388,100 +86,6 @@ function uc_product_content_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
 function uc_product_content_form_alter(&$form, &$form_state, $form_id) {
   // Alter the cart view form to make it into an overview and direct users back to the node if changes are needed
   if ($form_id == 'uc_cart_view_form') {
-    $items = uc_cart_get_contents();
-    
-    $source_nid = '';
-    $other_items = FALSE;
-    $i = 0;
-    foreach ($items as $item) {
-      if (isset($item->data['product_content_source_nid'])) {
-        $source_nid = $item->data['product_content_source_nid'];
-      
-        // remove links to the products directly
-        $form['items'][$i]['title']['#value'] = $item->title;
-      
-        // Rebuild the description from the title and options.
-        $form['items'][$i]['desc']['#value'] = $form['items'][$i]['title']['#value'] . $form['items'][$i]['description']['#value'];
-      
-        // don't allow removal of this item in the cart, user must edit the node
-        unset($form['items'][$i]['remove']['#type']);
-        
-        // don't allow quantity editing
-        $form['items'][$i]['qty']['#value'] = $form['items'][$i]['qty']['#default_value'];
-        unset($form['items'][$i]['qty']['#type']);
-        
-        $i++;
-      }
-      else {
-        $other_items = TRUE;
-      }
-    }
-    
-    if ($source_nid != '') {    
-      // hijack the continue shopping link to go back and edit
-      $form['continue_shopping']['#value'] = l('<< Make Changes', 'node/'. $source_nid .'/edit', array('query' => 'destination=cart'));
-      
-      // remove the update cart button (possibly move this to the theme layer/site specific tweaks module?)
-      unset($form['update']);
-    }
-    
-    // make some more changes to the form if there are no other items besides those governed by product_content
-    if (! $other_items) {
-      // get rid of the image and remove columns, but make the desc colum have the image column title first
-      $form['items']['#columns']['desc']['cell'] = $form['items']['#columns']['image']['cell'];
-      unset($form['items']['#columns']['remove']);
-      unset($form['items']['#columns']['image']);
-    }
+    _ucpc_cart_view_form_alter(&$form, &$form_state);
   }
 }
- /*       $node = $item->checkout_node;
-
-        // Update the title if configured based on user access.
-        if (variable_get('uc_node_checkout_cart_titles', TRUE) || variable_get('uc_node_checkout_click_to_edit', TRUE)) {
-          if (node_access('update', $node)) {
-            if (variable_get('uc_node_checkout_cart_titles', TRUE)) {
-              $title = l($item->title, 'node/'. $node->nid .'/edit', array('query' => 'destination=cart'));
-              $click = t('(click to edit)');
-            }
-            else {
-              $title = $form['items'][$i]['title']['#value'];
-              $click = ' - '. l(t('edit'), 'node/'. $node->nid .'/edit', array('query' => 'destination=cart'));
-            }
-
-            // Add the click to edit link to the title if necessary.
-            if (variable_get('uc_node_checkout_click_to_edit', TRUE)) {
-              $title .= ' '. theme('uc_cart_click_to_edit', $click);
-            }
-          }
-          else {
-            $title = check_plain($item->title);
-          }
-
-          $form['items'][$i]['title']['#value'] = $title;
-        }
-
-        // Add the node cart teaser beneath the title if necessary.
-        if (variable_get('uc_node_cart_teaser', TRUE)) {
-          if (variable_get('uc_node_order_product_teaser_override', FALSE)) {
-            $list = array(
-              token_replace(variable_get('uc_node_order_product_attribute', 'ID'), 'node', $node) .': '
-            . token_replace(variable_get('uc_node_order_product_option', '[nid] - [title]'), 'node', $node),
-            );
-            $teaser = theme('item_list', $list, NULL, 'ul', array('class' => 'uc-node-cart-teaser'));
-          }
-          else {
-            $teaser = theme('uc_node_cart_teaser', $node);
-          }
-
-          $form['items'][$i]['description']['#value'] .= $teaser;
-        }
-
-        // Rebuild the description from the title and options.
-        $form['items'][$i]['desc']['#value'] = $form['items'][$i]['title']['#value'] . $form['items'][$i]['description']['#value'];
-      }
-      $i++;
-    }
-
-    // Add a submit handler to check for removed products.
-    $form['update']['#submit'][] = 'uc_node_checkout_cart_view_submit';
-    $form['#submit'][] = 'uc_node_checkout_cart_view_submit';*/
