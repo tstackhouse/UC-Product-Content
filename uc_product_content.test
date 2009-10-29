@@ -4,7 +4,7 @@ class UCProductContentTestCase extends DrupalWebTestCase {
     return array(
       'name' => 'uc_product_content',
       'description' => 'Ensure that the Ubercart Product content provided functions properly.',
-      'group' => 'Functional Tests',
+      'group' => 'UC Product Content',
     );
   }
   
@@ -27,6 +27,10 @@ class UCProductContentTestCase extends DrupalWebTestCase {
     
     // create a content type for the products
     
+
+	// create some dummy products
+
+
     // create a content type to house the CCK field to test
     $field = 'registration';
     $field_name = 'Registration';

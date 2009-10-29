@@ -21,8 +21,8 @@ function uc_product_content_init() {
 }
 
 /**
-* Implementation of hook_theme().
-*/
+ * Implementation of hook_theme().
+ */
 function uc_product_content_theme() {
   return array_merge(
     _ucpc_cck_themes(),
@@ -32,27 +32,27 @@ function uc_product_content_theme() {
 }
 
 /**
- * Implementation of hook_nodeapi()
+ * Implementation of hook_nodeapi().
  */
 function uc_product_content_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
   switch ($op) {
     case 'load':
       $record = db_fetch_object(db_query("SELECT * FROM {uc_product_content_node_order} WHERE nid = %d", $node->nid));
-      if($record != null) {
+      if ($record != NULL) {
         $node->order_id = $record->order_id;
         $node->order = uc_order_load($node->order_id);
-      }      
+      }
       break;
-      
+
     case 'update':
       // update if not new revision
-    case 'insert':    
+    case 'insert':
       // we only need to do this once, it will only ever be one order assocated with this node
       $data['nid']      = $node->nid;
       $data['order_id'] = (isset($node->order_id)) ? $node->order_id : '';
-      
+
       drupal_write_record('uc_product_content_node_order', $data, 'nid');
-      
+
       // check if we're dealing with product content nodes that haven't checked out yet, if so, step in and goto cart
       //dsm(array('nodeapi_' . $op, $node));
       if (isset($node->has_product_content) && $node->has_product_content && ! isset($node->order_id)) {
@@ -71,7 +71,7 @@ function uc_product_content_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
     
     case 'delete':
       $record = db_fetch_object(db_query("SELECT * FROM {uc_product_content_node_order} WHERE nid = %d", $node->nid));
-      if($record != null) {
+      if ($record != NULL) {
         uc_order_delete($record->order_id);
         db_query("DELETE FROM {uc_product_content_node_order} WHERE nid = %d", $node->nid);
       }
