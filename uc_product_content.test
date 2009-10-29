@@ -1,46 +1,255 @@
 <?php
-class UCProductContentTestCase extends DrupalWebTestCase {
+
+
+// Steal the Ubercart testing framework to do some diurtywork for us with regard to product handling
+require_once(drupal_get_path('module', 'uc_cart') . '/uc_cart.test');
+
+class UCProductContentTestCase extends UbercartTestCase {
   public static function getInfo() {
     return array(
-      'name' => 'uc_product_content',
+      'name' => 'UC Product Content',
       'description' => 'Ensure that the Ubercart Product content provided functions properly.',
       'group' => 'UC Product Content',
     );
   }
   
   public function setUp() {
-    $args = func_get_args();
-    $modules = array_merge(array('content', 'uc_cart', 'uc_product', 'uc_order', 'uc_store', 'ca', 'uc_payment', 'uc_credit', 'test_gateway', 'uc_product_content'), $args);
-    call_user_func_array(array('parent','setUp'), $modules);
+    // pass the modules we want up to the Ubercart test object
+    parent::setUp('content', 'uc_product_content');
     
+    // test debug toggle
+    $this->debug_tests = TRUE;
+        
     // Create and log in our user
      $permissions = array(
          'access content',
          'administer content types',
          'administer nodes',
          'administer filters',
+         'administer permissions',
        );
 
-    $privileged_user = $this->drupalCreateUser($permissions);
-    $this->drupalLogin($privileged_user);
-    
-    
-    // create a content type for the products
-    
-
-	// create some dummy products
-
+    $this->privileged_user = $this->drupalCreateUser($permissions);
+    $this->drupalLogin($this->privileged_user);
 
     // create a content type to house the CCK field to test
-    $field = 'registration';
-    $field_name = 'Registration';
+    $this->type = 'registration';
+    $type_name = 'Registration';
     $edit = array(
-      'type' => $field,
-      'name' => $field_name,
+      'type' => $this->type,
+      'name' => $type_name,
       'body_label' => 'Registration',
-      'description' => 'UC Product Content Project'
+      'description' => 'UC Product Content Test Type'
     );
-    $this->drupalPost('admin/content/types/add', $edit, 'Save content type');
-    $admin_project_url = 'admin/content/node-type/'. $field;
+    //$this->drupalPost('admin/content/types/add', $edit, 'Save content type');
+    $this->type_url = 'admin/content/node-type/'. $this->type;
+    
+    $this->drupalCreateContentType($edit);
+    
+    $this->checkPermissions(array(), TRUE);
+    
+    //static $available;
+    //$available = module_invoke_all('perm');
+    //$this->pass("Permissions: " . print_r($available, TRUE));
+    
+    // create some products using UbercartTestCase
+    $this->product_1 = $this->createProduct();
+    $this->product_2 = $this->createProduct();
+    $this->product_3 = $this->createProduct();
+    $this->product_4 = $this->createProduct();
+    
+    // For debugging we can output the page so it can be opened with a browser
+    // show permissions that the system has
+    if ($this->debug_tests) {
+      $this->drupalGet('admin/user/permissions');
+      $this->outputScreenContents("Permissions after SetUp", 'productContentSetUp');
+    }
+    
+    $this->drupalLogout();
+    
+    // create a normal user
+    $permissions = array(
+      'access content',
+      'create registration content',
+      'edit own registration content',
+    );
+    
+    $this->normal_user = $this->drupalCreateUser($permissions);
+  }
+  
+  /**
+   * Test functionality of product content radio field
+   */
+  public function testProductRadioField() {
+    // make sure w'ere logged in with the privaleged user
+    $this->drupalLogin($this->privileged_user);
+    
+    
+    
+    // create and verify the field on our content type =================================================================
+    $this->testfield_name = 'testfield';
+    $product_testfield = array(
+      '_add_new_field[label]' => $this->testfield_name,
+      '_add_new_field[weight]' => '-99',
+      '_add_new_field[field_name]' => $this->testfield_name,
+      //'_add_new_field[type]' => 'text',
+      //'_add_new_field[widget_type]' => 'text_textfield',
+      '_add_new_field[type]' => 'uc_product_content',
+      '_add_new_field[widget_type]' => 'uc_product_content_radios',
+    );
+    $this->drupalPost($this->type_url .'/fields', $product_testfield, 'Save');
+
+    $field_path = $this->type_url .'/fields/field_' . $this->testfield_name;
+    $this->drupalGet($field_path);
+    $this->assertFieldById('edit-description','', 'Looking for edit-description field as indication that we got to the field settings page');
+    
+    // For debugging we can output the page so it can be opened with a browser
+    if ($this->debug_tests) {    
+      $this->outputScreenContents("After drupalGet($field_path) in testProductRadioField", 'testProductRadioField');
+    }
+    // END create and verify the field on our content type =============================================================
+
+
+
+    // Make sure we can define products for the field ==================================================================
+    $field_path = $this->type_url .'/fields/field_' . $this->testfield_name;
+    
+    // populate the field form & submit
+    $data = array(
+      'product_options[1]' => '1',
+      'product_options[2]' => '1',
+      'product_options[4]' => '1',
+    );
+    $this->drupalPost($field_path, $data, 'Save field settings');
+    $this->assertText(t("Saved field $this->testfield_name."), t('Make sure saving the field settings did not generate an error'));
+    
+    // make sure that the data we just saved actually saved
+    $this->drupalGet($field_path);
+    $this->assertFieldChecked('edit-product-options-1');
+    $this->assertFieldChecked('edit-product-options-2');
+    $this->assertFieldChecked('edit-product-options-4');
+    
+    // For debugging we can output the page so it can be opened with a browser
+    if ($this->debug_tests) {    
+      $this->outputScreenContents("After drupalGet($field_path) in testProductRadioField", 'testProductRadioField');
+    }
+    // END Make sure we can define products for the field ==============================================================
+
+
+
+    // switch to the normal user
+    $this->drupalLogin($this->normal_user);
+
+
+
+    // Make sure the products appear on the node creation form =========================================================
+    $node_path = 'node/add/' . $this->type;
+    
+    $this->drupalGet($node_path);
+    $this->assertFieldById('edit-field-' . $this->testfield_name . '-0-product-1');
+    $this->assertFieldById('edit-field-' . $this->testfield_name . '-0-product-2');
+    $this->assertFieldById('edit-field-' . $this->testfield_name . '-0-product-4');
+    
+    // For debugging we can output the page so it can be opened with a browser
+    if ($this->debug_tests) {    
+      $this->outputScreenContents("After drupalGet($node_path) in testProductRadioField", 'testProductRadioField');
+    }
+    // END Make sure the products appear on the node creation form =====================================================
+    
+    
+    
+    // Create a node and make sure we end up at the checkout screen with the product in the cart =======================
+    $title = $this->randomName(10);
+    $data = array(
+      'field_testfield[0][product]' => '2',
+      'title' => $title,
+    );
+    
+    $this->drupalPost($node_path, $data, 'Save');
+    
+    $node = $this->drupalGetNodeByTitle($title);
+    
+    $this->assertText('Checkout');
+    $this->assertText($this->product_2->title);
+    
+    // For debugging we can output the page so it can be opened with a browser
+    if ($this->debug_tests) {    
+      $this->outputScreenContents("After drupalGet($node_path) in testProductRadioField", 'testProductRadioField');
+    }
+    // END Create a node and make sure we end up at the checkout screen with the product in the cart ===================    
+    
+    
+
+    // Checkout and make sure that the node gets locked properly =======================================================
+    $this->checkout();
+    
+    $edit_path = 'node/' . $node->nid . '/edit';
+    
+    $this->drupalGet($edit_path);
+    $this->assertResponse('403');
+    
+    // For debugging we can output the page so it can be opened with a browser
+    if ($this->debug_tests) {    
+      $this->outputScreenContents("After drupalGet($edit_path) in testProductRadioField", 'testProductRadioField');
+    }
+    // END Checkout and make sure that the node gets locked properly ===================================================
+
+
+
+    // =================================================================================================================
+
+  } // END testProductRadioField()
+  
+
+
+  /**
+   * function checkout() executes the checkout process, tweaks from UCTestCase to work with product_content
+   */
+  function checkout($edit = array()) {
+    //build the panes
+    $edit += array(
+      'panes[billing][billing_first_name]' => $this->randomName(10, 'Firstname_'),
+      'panes[billing][billing_last_name]' => $this->randomName(10, 'Lastname_'),
+      'panes[billing][billing_street1]' => $this->randomName(10, 'Street_'),
+      'panes[billing][billing_city]' => $this->randomName(10, 'City_'),
+      'panes[billing][billing_zone]' => db_result(db_query('SELECT zone_id FROM {uc_zones} WHERE zone_country_id = %s ORDER BY rand() LIMIT 1', variable_get('uc_store_country', 840))),
+      'panes[billing][billing_postal_code]' => substr($this->randomName(4, 'Zip_'), -6)
+      );
+
+    //If the email address has not been set, and the user has not logged in,
+    //Add a primary email address.
+    if (!isset($edit['panes[customer][primary_email]']) && !$this->loggedInUser) {
+      $edit['panes[customer][primary_email]'] = $this->randomName(8, 'Email_') . '@example.com';
+    }
+    $this->drupalPost('cart/checkout', $edit, t('Review order'));
+    $this->assertRaw('Your order is almost complete.', t('Review order page: Found text "Your order is almost complete."'));
+    
+    // For debugging we can output the page so it can be opened with a browser
+    if ($this->debug_tests) {    
+      $this->outputScreenContents("After drupalPost(cart/checkout) in testProductRadioField", 'testProductRadioField');
+    }
+    
+    //Complete the review page
+    $this->drupalPost(NULL, array(), t('Submit order'));
+    if ($order_id = db_result(db_query("SELECT order_id FROM {uc_orders} WHERE billing_first_name = '%s'", $edit['panes[billing][billing_first_name]']))){
+      $this->pass(t('Order %order_id has been created', array('%order_id' => $order_id)));
+    }
+  }
+
+  /**
+   * A utility function we can use in debugging our test. This outputs the screen
+   * as an HTML file we can view, and uses the pass() method to report it to us
+   * in the simpletest web interface
+   */
+  private function outputScreenContents($description, $basename) {
+    // This is a hack to get a directory that won't be cleaned up by simpletest
+    $file_dir = file_directory_path().'/../simpletest_output_pages';
+    if (!is_dir($file_dir)) {
+      mkdir($file_dir, 0777, TRUE);
+    }
+    $output_path = "$file_dir/$basename." . $this->randomName(10) . '.html';
+    $rv = file_put_contents($output_path, $this->drupalGetContent());
+    // html output here as using l() does not eork properly w/o clean URL's
+    $this->pass("$description: Contents of result page are <a href='/$output_path'>here</a>.");
   }
 }

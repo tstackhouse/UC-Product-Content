@@ -131,7 +131,7 @@ function _ucpc_cart_view_form_alter(&$form, &$form_state) {
   
   if ($source_nid != '') {
     // we're dealing with at least one item governed by uc_product_content, send them to checkout!
-    drupal_goto('cart/checkout');
+    //drupal_goto('cart/checkout');
       
     // hijack the continue shopping link to go back and edit
     /*$form['continue_shopping']['#value'] = l('<< Make Changes', 'node/'. $source_nid .'/edit', array('query' => 'destination=cart'));
@@ -229,9 +229,7 @@ function uc_product_content_uc_checkout_complete($order, $account) {
     // give the node to the superuser so that only admins can edit it
     // FUTURE: make a config option or make a module like node_access a depencency
     $node->uid = 1;
-    
-    //dsm($node);
-    
+        
     node_save($node);
   }
 }
