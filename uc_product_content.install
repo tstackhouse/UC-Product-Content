@@ -1,5 +1,12 @@
 <?php
-// $Id:$
+// $Id$
+
+/**
+ * @file
+ * Install/Remove this module
+ * 
+ * @author Tim Stackhouse
+ */
 
 /**
  * Implementation of hook_install().

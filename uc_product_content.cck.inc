@@ -153,19 +153,19 @@ function uc_product_content_field($op, &$node, $field, &$items, $teaser, $page) 
           $in_cart = FALSE;
           $nid = $element['product'];
           foreach ($cart as $item) {
-            if($item->nid == $nid && $item->data['product_content_source_nid'] == $node->nid) {
+            if ($item->nid == $nid && $item->data['product_content_source_nid'] == $node->nid) {
               // there's aready one of these in the cart!
               $in_cart = TRUE;
               
             }
-            else if (in_array($item->nid, $choices) || $item->data['product_content_source_nid'] != $node->nid) {
+            elseif (in_array($item->nid, $choices) || $item->data['product_content_source_nid'] != $node->nid) {
               // we're looking at an item that's a choice, but not chosen, and is in the cart. remove it.
               uc_cart_remove_item($item->nid, $item->cart_id, $item->data);
             }
           }
 
           // make sure we don't add the non-existant 'none' option to the cart
-          if($nid != 'none' && $nid != 0) {
+          if ($nid != 'none' && $nid != 0) {
             // add product to cart, if it's not already in there.
             if (! $in_cart) {
               uc_cart_add_item($nid, 1, array('product_content_source_nid' => $node->nid), NULL, FALSE);
@@ -254,10 +254,9 @@ function uc_product_content_radios_process($element, $edit, $form_state, $form) 
      $options['none'] = t('None');
      unset($field['widget']['product_options'][$pos]);
    }
-   $nids = implode(', ', $field['widget']['product_options']);
-   $data = db_query("SELECT nid, title FROM {node} WHERE nid IN (%s) ORDER BY title ASC", $nids);
+   $data = db_query("SELECT nid, title FROM {node} WHERE nid IN (" . db_placeholders($field['widget']['product_options']) . ") ORDER BY title ASC", $field['widget']['product_options']);
    while ($obj = db_fetch_object($data)) {
-     $options[$obj->nid] = $obj->title;
+     $options[$obj->nid] = check_plain($obj->title);
    }
   }
 
@@ -293,7 +292,7 @@ function uc_product_content_radios_process($element, $edit, $form_state, $form) 
  */
 function uc_product_content_widget_settings($op, $widget) {
   // do some cleanup on the strange return values form the checkboxes
-  if(isset($widget['product_options'])) {
+  if (isset($widget['product_options'])) {
     $widget['product_options'] = array_keys(array_filter($widget['product_options']));
   }
   

@@ -62,7 +62,7 @@ function theme_uc_product_content_checkout_pane_node_info() {
   }
   
   if ($source_nid != '') {
-    return node_view(node_load($source_nid)) . '<p>Not right? ' . l('<< Make Changes', 'node/' . $source_nid . '/edit') . '</p>';
+    return node_view(node_load($source_nid)) . '<p>Not right? ' . l(t('<< Make Changes'), 'node/' . $source_nid . '/edit') . '</p>';
   }
 }
 

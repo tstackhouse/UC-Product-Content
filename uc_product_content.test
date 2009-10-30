@@ -1,5 +1,11 @@
 <?php
+// $Id$
 
+/**
+ * @file
+ * 
+ * Run tests on the functionality of the UC Product Content module
+ */
 
 // Steal the Ubercart testing framework to do some diurtywork for us with regard to product handling
 require_once(drupal_get_path('module', 'uc_cart') . '/uc_cart.test');
@@ -101,7 +107,7 @@ class UCProductContentTestCase extends UbercartTestCase {
 
     $field_path = $this->type_url .'/fields/field_' . $this->testfield_name;
     $this->drupalGet($field_path);
-    $this->assertFieldById('edit-description','', 'Looking for edit-description field as indication that we got to the field settings page');
+    $this->assertFieldById('edit-description', '', 'Looking for edit-description field as indication that we got to the field settings page');
     
     // For debugging we can output the page so it can be opened with a browser
     if ($this->debug_tests) {    
@@ -243,7 +249,7 @@ class UCProductContentTestCase extends UbercartTestCase {
       'panes[billing][billing_last_name]' => $this->randomName(10, 'Lastname_'),
       'panes[billing][billing_street1]' => $this->randomName(10, 'Street_'),
       'panes[billing][billing_city]' => $this->randomName(10, 'City_'),
-      'panes[billing][billing_zone]' => db_result(db_query('SELECT zone_id FROM {uc_zones} WHERE zone_country_id = %s ORDER BY rand() LIMIT 1', variable_get('uc_store_country', 840))),
+      'panes[billing][billing_zone]' => db_result(db_query_range("SELECT zone_id FROM {uc_zones} WHERE zone_country_id = '%s' ORDER BY rand()", variable_get('uc_store_country', 840), 0, 1)),
       'panes[billing][billing_postal_code]' => substr($this->randomName(4, 'Zip_'), -6)
       );
 
@@ -262,7 +268,7 @@ class UCProductContentTestCase extends UbercartTestCase {
     
     //Complete the review page
     $this->drupalPost(NULL, array(), t('Submit order'));
-    if ($order_id = db_result(db_query("SELECT order_id FROM {uc_orders} WHERE billing_first_name = '%s'", $edit['panes[billing][billing_first_name]']))){
+    if ($order_id = db_result(db_query("SELECT order_id FROM {uc_orders} WHERE billing_first_name = '%s'", $edit['panes[billing][billing_first_name]']))) {
       $this->pass(t('Order %order_id has been created', array('%order_id' => $order_id)));
     }
   }
@@ -274,7 +280,7 @@ class UCProductContentTestCase extends UbercartTestCase {
    */
   private function outputScreenContents($description, $basename) {
     // This is a hack to get a directory that won't be cleaned up by simpletest
-    $file_dir = file_directory_path().'/../simpletest_output_pages';
+    $file_dir = file_directory_path() . '/../simpletest_output_pages';
     if (!is_dir($file_dir)) {
       mkdir($file_dir, 0777, TRUE);
     }
