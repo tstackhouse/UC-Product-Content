@@ -18,7 +18,7 @@ class UCProductContentTestCase extends UbercartTestCase {
     parent::setUp('content', 'uc_product_content');
     
     // test debug toggle
-    $this->debug_tests = TRUE;
+    $this->debug_tests = FALSE;
         
     // Create and log in our user
      $permissions = array(
@@ -179,6 +179,37 @@ class UCProductContentTestCase extends UbercartTestCase {
     // END Create a node and make sure we end up at the checkout screen with the product in the cart ===================    
     
     
+
+    // Check going back and editing the node and make sure that the new product appears and the old one is removed =====
+    $edit_link_text = '<< Make Changes';
+    $this->clickLink($edit_link_text);
+    
+    // For debugging we can output the page so it can be opened with a browser
+    if ($this->debug_tests) {    
+      $this->outputScreenContents("After clickLink($edit_link_text) in testProductRadioField", 'testProductRadioField');
+    }
+    
+    // look for the edit title field and make sure that it's the node title
+    $this->assertFieldById('edit-title', $title);
+    
+    $node_edit_path = 'node/' . $node->nid . '/edit';
+    $data = array(
+      'field_testfield[0][product]' => '4',
+      'title' => $title,
+    );
+    
+    $this->drupalPost($node_edit_path, $data, 'Save');
+    
+    $this->assertText('Checkout');
+    $this->assertText($this->product_4->title);
+    
+    // For debugging we can output the page so it can be opened with a browser
+    if ($this->debug_tests) {    
+      $this->outputScreenContents("After drupalPost($node_path) in testProductRadioField", 'testProductRadioField');
+    }
+    // END Check going back and editing the node and make sure that the new product appears and the old one is removed =
+
+
 
     // Checkout and make sure that the node gets locked properly =======================================================
     $this->checkout();
