@@ -174,6 +174,7 @@ function theme_uc_product_content_order_pane_node_info($node) {
  * Display order information on a node
  */
 function _ucpc_show_order(&$node) {
+  $node->order = uc_order_load($node->order_id);
   $node->content['order']['#value'] = theme('uc_product_content_show_order', $node);
   $node->content['order']['#weight'] = 100;
 }

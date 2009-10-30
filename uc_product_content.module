@@ -40,7 +40,6 @@ function uc_product_content_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
       $record = db_fetch_object(db_query("SELECT * FROM {uc_product_content_node_order} WHERE nid = %d", $node->nid));
       if ($record != NULL) {
         $node->order_id = $record->order_id;
-        $node->order = uc_order_load($node->order_id);
       }
       break;
 
@@ -51,8 +50,16 @@ function uc_product_content_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
       $data['nid']      = $node->nid;
       $data['order_id'] = (isset($node->order_id)) ? $node->order_id : '';
 
-      drupal_write_record('uc_product_content_node_order', $data, 'nid');
-
+      $record = db_fetch_object(db_query("SELECT * FROM {uc_product_content_node_order} WHERE nid = %d", $data['nid']));
+      if (! $record) {
+        // new entry
+        drupal_write_record('uc_product_content_node_order', $data);
+      }
+      else {
+        // update
+        drupal_write_record('uc_product_content_node_order', $data, 'nid');
+      }
+      
       // check if we're dealing with product content nodes that haven't checked out yet, if so, step in and goto cart
       //dsm(array('nodeapi_' . $op, $node));
       if (isset($node->has_product_content) && $node->has_product_content && ! isset($node->order_id)) {

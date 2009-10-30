@@ -233,6 +233,14 @@ class UCProductContentTestCase extends UbercartTestCase {
 
 
 
+    // Make sure that the node had the order associated with it ========================================================
+    $node = $this->drupalGetNodeByTitle($title);
+            
+    $this->assert(isset($node->order_id), "Check that the node was successfully updated with the order id (Order ID: $node->order_id)");
+    // END Make sure that the node had the order associated with it ====================================================
+
+
+
     // =================================================================================================================
 
   } // END testProductRadioField()
