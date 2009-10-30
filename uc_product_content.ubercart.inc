@@ -62,7 +62,7 @@ function theme_uc_product_content_checkout_pane_node_info() {
   }
   
   if ($source_nid != '') {
-    return node_view(node_load($source_nid)) . '<p>Not right? ' . l('<< Make Changes', 'node/' . $node->nid . '/edit') . '</p>';
+    return node_view(node_load($source_nid)) . '<p>Not right? ' . l('<< Make Changes', 'node/' . $source_nid . '/edit') . '</p>';
   }
 }
 
@@ -93,7 +93,7 @@ function theme_uc_product_content_order_pane_node_info($node) {
 /**
  * 
  */
-function _ucpc_cart_view_form_alter(&$form, &$form_state) {
+/*function _ucpc_cart_view_form_alter(&$form, &$form_state) {
   $items = uc_cart_get_contents();
   
   $source_nid = '';
@@ -103,7 +103,6 @@ function _ucpc_cart_view_form_alter(&$form, &$form_state) {
     if (isset($item->data['product_content_source_nid'])) {
       $source_nid = $item->data['product_content_source_nid'];
     
-    /*
       // remove links to the products directly
       $form['items'][$i]['title']['#value'] = $item->title;
     
@@ -125,7 +124,7 @@ function _ucpc_cart_view_form_alter(&$form, &$form_state) {
       $i++;
     }
     else {
-      $other_items = TRUE; */ //unused form edits
+      $other_items = TRUE;
     }
   }
   
@@ -134,20 +133,20 @@ function _ucpc_cart_view_form_alter(&$form, &$form_state) {
     //drupal_goto('cart/checkout');
       
     // hijack the continue shopping link to go back and edit
-    /*$form['continue_shopping']['#value'] = l('<< Make Changes', 'node/'. $source_nid .'/edit', array('query' => 'destination=cart'));
+    $form['continue_shopping']['#value'] = l('<< Make Changes', 'node/'. $source_nid .'/edit', array('query' => 'destination=cart'));
     
     // remove the update cart button (possibly move this to the theme layer/site specific tweaks module?)
-    unset($form['update']);*/
+    unset($form['update']);
   }
   
   // make some more changes to the form if there are no other items besides those governed by product_content
-/*  if (! $other_items) {
+  if (! $other_items) {
     // get rid of the image and remove columns, but make the desc colum have the image column title first
     $form['items']['#columns']['desc']['cell'] = $form['items']['#columns']['image']['cell'];
     unset($form['items']['#columns']['remove']);
     unset($form['items']['#columns']['image']);
-  }*/
-}
+  }
+}*/
 
 /**
  * Implementation of hook_cart_pane()
