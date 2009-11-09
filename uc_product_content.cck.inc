@@ -200,7 +200,7 @@ function uc_product_content_content_is_empty($item, $field) {
  * Implementation of hook_default_value()
  */
 function uc_product_content_default_value(&$form, &$form_state, $field, $delta) {
-  return '';
+  return '0';
 }
 
 //===== END FIELD FUNCTIONS ============================================================================================
