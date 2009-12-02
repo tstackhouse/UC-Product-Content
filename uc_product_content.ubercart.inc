@@ -226,6 +226,10 @@ function uc_product_content_uc_checkout_complete($order, $account) {
     // make the magic happen
     // store the order number
     $node->order_id = $order->order_id;
+    
+    // store the originator uid
+    $node->originator = $node->uid;
+    
     // give the node to the superuser so that only admins can edit it
     // FUTURE: make a config option or make a module like node_access a depencency
     $node->uid = 1;

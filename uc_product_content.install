@@ -54,9 +54,25 @@ function uc_product_content_schema() {
         'not null' => TRUE,
         'default' => 0,
       ),
+      'originator' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
     ),
     'primary key' => array('nid'),
   );
 
   return $schema;
+}
+
+/**
+ * Implementation of hook_update_N().
+ */
+function uc_product_content_update_6101() {
+  $ret = array();
+  
+  db_add_field($ret, 'uc_product_content_node_order', 'originator', array('type' => 'int', 'not null' => TRUE));
+  
+  return $ret;
 }

@@ -39,7 +39,8 @@ function uc_product_content_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
     case 'load':
       $record = db_fetch_object(db_query("SELECT * FROM {uc_product_content_node_order} WHERE nid = %d", $node->nid));
       if ($record != NULL) {
-        $node->order_id = $record->order_id;
+        $node->order_id   = $record->order_id;
+        $node->originator = $record->originator;
       }
       break;
 
@@ -49,8 +50,9 @@ function uc_product_content_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
       // verify we're working with a produt content node
       if(isset($node->has_product_content) && $node->has_product_content) {
         // we only need to do this once, it will only ever be one order assocated with this node
-        $data['nid']      = $node->nid;
-        $data['order_id'] = (isset($node->order_id)) ? $node->order_id : '';
+        $data['nid']        = $node->nid;
+        $data['order_id']   = (isset($node->order_id)) ? $node->order_id : '';
+        $data['originator'] = $node->originator;
 
         $record = db_fetch_object(db_query("SELECT * FROM {uc_product_content_node_order} WHERE nid = %d", $data['nid']));
         if (! $record) {
